@@ -119,7 +119,7 @@ public class Explorer extends Application {
       File selectedFile = chooser.showSaveDialog(null);
 
       try {
-        jarExplorer.saveJar(selectedFile);
+        jarExplorer.saveJar(selectedFile.getAbsolutePath());
 
       } catch (IOException e1) {
         e1.printStackTrace();

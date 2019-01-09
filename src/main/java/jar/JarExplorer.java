@@ -1,9 +1,6 @@
 package jar;
 
-import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,14 +8,13 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 import javassist.CannotCompileException;
 import javassist.ClassPath;
 import javassist.ClassPool;
@@ -78,16 +74,14 @@ public class JarExplorer {
   public void extractArchive(Path archiveFile, Path destPath) throws IOException {
 
     FileUtils.deleteDirectory(destPath.toFile());
-    Files.createDirectories(destPath); // create dest path folder(s)
+    Files.createDirectories(destPath);
 
     try (ZipFile archive = new ZipFile(archiveFile.toFile())) {
 
-      // sort entries by name to always create folders first
       List<? extends ZipEntry> entries = archive.stream()
           .sorted(Comparator.comparing(ZipEntry::getName))
           .collect(Collectors.toList());
 
-      // copy each entry in the dest path
       for (ZipEntry entry : entries) {
         Path entryDest = destPath.resolve(entry.getName());
 
@@ -101,10 +95,9 @@ public class JarExplorer {
     }
   }
 
-  public void saveJar(File pathToJar) throws IOException {
+  public void saveJar(String pathToJar) throws IOException {
 
-    JarOutputStream jos = new JarOutputStream(new FileOutputStream(pathToJar), manifest);
-    createJar(new File(EXTRACT_PATH), jos);
+    jarDirectory(EXTRACT_PATH, pathToJar);
     FileUtils.deleteDirectory(new File(EXTRACT_PATH));
   }
 
@@ -139,45 +132,25 @@ public class JarExplorer {
     }
   }
 
-  private void createJar(File source, JarOutputStream target) throws IOException {
-    BufferedInputStream in = null;
-    try {
-      if (source.isDirectory()) {
-        String name = source.getPath().replace("\\", "/");
-        if (!name.isEmpty()) {
-          if (!name.endsWith("/")) {
-            name += "/";
-          }
-          JarEntry entry = new JarEntry(name);
-          entry.setTime(source.lastModified());
-          target.putNextEntry(entry);
-          target.closeEntry();
-        }
-        for (File nestedFile : source.listFiles()) {
-          createJar(nestedFile, target);
-        }
-        return;
-      }
+  public static void jarDirectory(String sourceDirectoryPath, String jarPath) throws IOException {
+    Path zipFilePath = Files.createFile(Paths.get(jarPath));
 
-      JarEntry entry = new JarEntry(source.getPath().replace("\\", "/"));
-      entry.setTime(source.lastModified());
-      target.putNextEntry(entry);
-      in = new BufferedInputStream(new FileInputStream(source));
+    try (ZipOutputStream zipOutputStream = new ZipOutputStream(
+        Files.newOutputStream(zipFilePath))) {
 
-      byte[] buffer = new byte[1024];
-      while (true) {
-        int count = in.read(buffer);
-        if (count == -1) {
-          break;
-        }
-        target.write(buffer, 0, count);
-      }
-      target.closeEntry();
+      Path sourceDirPath = Paths.get(sourceDirectoryPath);
 
-    } finally {
-      if (in != null) {
-        in.close();
-      }
+      Files.walk(sourceDirPath).filter(path -> !Files.isDirectory(path))
+          .forEach(path -> {
+            ZipEntry zipEntry = new ZipEntry(sourceDirPath.relativize(path).toString());
+            try {
+              zipOutputStream.putNextEntry(zipEntry);
+              zipOutputStream.write(Files.readAllBytes(path));
+              zipOutputStream.closeEntry();
+            } catch (Exception e) {
+              System.err.println(e);
+            }
+          });
     }
   }
 }
