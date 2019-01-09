@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import javassist.CannotCompileException;
 import javassist.ClassPath;
 import javassist.ClassPool;
 import javassist.CtClass;
@@ -33,7 +34,6 @@ public class JarExplorer {
     cp = ClassPool.getDefault();
     path = cp.insertClassPath(pathToJar);
     ClassPool.doPruning = false;
-//    this.jarClasses = getClassesFromJar();
 
     extractArchive(Paths.get(pathToJar), Paths.get(EXTRACT_PATH));
 
@@ -42,7 +42,6 @@ public class JarExplorer {
     jarClasses = new ArrayList<>();
 
     for (String s : classNames) {
-      System.out.println(s);
       jarClasses.add(new JarClass(cp.get(s)));
     }
 
@@ -105,6 +104,7 @@ public class JarExplorer {
           .map(file -> file.toString().substring(EXTRACT_PATH.length() + 1))
           .filter(f -> f.endsWith(".class"))
           .map(s -> s.replace("/", "."))
+          .map(s -> s.substring(0, s.length() - 6))
           .forEach(classes::add);
 
     } catch (IOException e) {
@@ -114,7 +114,10 @@ public class JarExplorer {
     return classes;
   }
 
-  public void saveClass(CtClass ctClass) {
+  public void saveClass(CtClass ctClass) throws CannotCompileException {
+
+    ctClass.toClass();
+
 
   }
 }

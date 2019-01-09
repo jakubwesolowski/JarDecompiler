@@ -370,6 +370,7 @@ public class Explorer extends Application {
 
         b2.setOnAction(event1 -> {
           String body = methodBody.getText();
+          System.out.println(body);
 
           try {
             item.getCtMethod().insertAfter(body);
@@ -433,6 +434,13 @@ public class Explorer extends Application {
 
         } catch (NotFoundException e) {
           e.printStackTrace();
+        } catch (CannotCompileException e) {
+          Alert a = new Alert(AlertType.ERROR);
+          a.setTitle("Compile error");
+          a.setHeaderText(null);
+          a.setContentText("Cannot compile code " + "\n" + e.getCause().toString());
+          a.showAndWait();
+          e.printStackTrace();
         }
       });
 
@@ -488,6 +496,13 @@ public class Explorer extends Application {
           fieldListView.getItems().remove(cell.getItem());
 
         } catch (NotFoundException e) {
+          e.printStackTrace();
+        } catch (CannotCompileException e) {
+          Alert a = new Alert(AlertType.ERROR);
+          a.setTitle("Compile error");
+          a.setHeaderText(null);
+          a.setContentText("Cannot compile code " + "\n" + e.getCause().toString());
+          a.showAndWait();
           e.printStackTrace();
         }
       });
@@ -639,6 +654,13 @@ public class Explorer extends Application {
 
         } catch (NotFoundException e) {
           e.printStackTrace();
+        } catch (CannotCompileException e) {
+          Alert a = new Alert(AlertType.ERROR);
+          a.setTitle("Compile error");
+          a.setHeaderText(null);
+          a.setContentText("Cannot compile code " + "\n" + e.getCause().toString());
+          a.showAndWait();
+          e.printStackTrace();
         }
       });
 
@@ -673,11 +695,11 @@ public class Explorer extends Application {
         }
 
       } catch (NotFoundException e) {
-//        Alert a = new Alert(AlertType.ERROR);
-//        a.setTitle("Exception");
-//        a.setHeaderText(null);
-//        a.setContentText(e.getCause().toString());
-//        a.showAndWait();
+        Alert a = new Alert(AlertType.ERROR);
+        a.setTitle("Exception");
+        a.setHeaderText(null);
+        a.setContentText(e.getCause().toString());
+        a.showAndWait();
         e.printStackTrace();
       } catch (IOException e) {
         e.printStackTrace();
