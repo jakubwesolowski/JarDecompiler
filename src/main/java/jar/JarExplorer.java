@@ -1,5 +1,9 @@
 package jar;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -7,7 +11,9 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -34,6 +40,8 @@ public class JarExplorer {
     cp = ClassPool.getDefault();
     path = cp.insertClassPath(pathToJar);
     ClassPool.doPruning = false;
+
+    manifest = getManifest();
 
     extractArchive(Paths.get(pathToJar), Paths.get(EXTRACT_PATH));
 
@@ -93,6 +101,13 @@ public class JarExplorer {
     }
   }
 
+  public void saveJar(File pathToJar) throws IOException {
+
+    JarOutputStream jos = new JarOutputStream(new FileOutputStream(pathToJar), manifest);
+    createJar(new File(EXTRACT_PATH), jos);
+    FileUtils.deleteDirectory(new File(EXTRACT_PATH));
+  }
+
   public List<String> getClassNames(Path path) {
 
     ArrayList<String> classes = new ArrayList<>();
@@ -115,9 +130,54 @@ public class JarExplorer {
   }
 
   public void saveClass(CtClass ctClass) throws CannotCompileException {
+    ctClass.toClass(this.getClass().getClassLoader(), this.getClass().getProtectionDomain());
+    System.out.println(ctClass.getName());
+    try {
+      ctClass.writeFile(EXTRACT_PATH);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
 
-    ctClass.toClass();
+  private void createJar(File source, JarOutputStream target) throws IOException {
+    BufferedInputStream in = null;
+    try {
+      if (source.isDirectory()) {
+        String name = source.getPath().replace("\\", "/");
+        if (!name.isEmpty()) {
+          if (!name.endsWith("/")) {
+            name += "/";
+          }
+          JarEntry entry = new JarEntry(name);
+          entry.setTime(source.lastModified());
+          target.putNextEntry(entry);
+          target.closeEntry();
+        }
+        for (File nestedFile : source.listFiles()) {
+          createJar(nestedFile, target);
+        }
+        return;
+      }
 
+      JarEntry entry = new JarEntry(source.getPath().replace("\\", "/"));
+      entry.setTime(source.lastModified());
+      target.putNextEntry(entry);
+      in = new BufferedInputStream(new FileInputStream(source));
 
+      byte[] buffer = new byte[1024];
+      while (true) {
+        int count = in.read(buffer);
+        if (count == -1) {
+          break;
+        }
+        target.write(buffer, 0, count);
+      }
+      target.closeEntry();
+
+    } finally {
+      if (in != null) {
+        in.close();
+      }
+    }
   }
 }

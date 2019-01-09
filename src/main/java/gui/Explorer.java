@@ -105,11 +105,29 @@ public class Explorer extends Application {
 
     Menu fileMenu = new Menu("File");
     MenuItem openFile = new MenuItem("Open");
+    MenuItem saveJar = new Menu("Save");
     openFile.setOnAction(e -> {
       addFileTree();
     });
+    saveJar.setOnAction(e -> {
+      FileChooser chooser = new FileChooser();
+      chooser.setTitle("Open jar file");
+      chooser.getExtensionFilters().add(
+          new ExtensionFilter("Jar file", "*.jar")
+      );
 
+      File selectedFile = chooser.showSaveDialog(null);
+
+      try {
+        jarExplorer.saveJar(selectedFile);
+
+      } catch (IOException e1) {
+        e1.printStackTrace();
+      }
+
+    });
     fileMenu.getItems().add(openFile);
+    fileMenu.getItems().add(saveJar);
     menuBar.getMenus().add(fileMenu);
 
     Menu editMenu = new Menu("Edit");
