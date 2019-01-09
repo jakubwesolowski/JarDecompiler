@@ -152,8 +152,6 @@ public class Explorer extends Application {
           a.setContentText("Cannot compile code " + "\n" + e.getCause().toString());
           a.showAndWait();
           e.printStackTrace();
-        } catch (IOException e) {
-          e.printStackTrace();
         }
       });
 
@@ -207,8 +205,6 @@ public class Explorer extends Application {
           a.setContentText("Cannot compile code " + "\n" + e.getCause().toString());
           a.showAndWait();
           e.printStackTrace();
-        } catch (IOException e) {
-          e.printStackTrace();
         }
       });
 
@@ -253,7 +249,6 @@ public class Explorer extends Application {
           CtNewConstructor.make(body, item.getCtClass());
           jarExplorer.saveClass(item.getCtClass());
           item.getCtClass().defrost();
-          jarExplorer.update();
           stage.close();
 
         } catch (CannotCompileException e) {
@@ -262,15 +257,6 @@ public class Explorer extends Application {
           a.setHeaderText(null);
           a.setContentText("Cannot compile code " + "\n" + e.getCause().toString());
           a.showAndWait();
-          e.printStackTrace();
-        } catch (NotFoundException e) {
-          Alert a = new Alert(AlertType.ERROR);
-          a.setTitle("Not found");
-          a.setHeaderText(null);
-          a.setContentText(e.getCause().toString());
-          a.showAndWait();
-          e.printStackTrace();
-        } catch (IOException e) {
           e.printStackTrace();
         }
       });
@@ -370,7 +356,6 @@ public class Explorer extends Application {
             item.getCtMethod().setBody(body);
             jarExplorer.saveClass(item.getCtClass());
             item.getCtClass().defrost();
-            jarExplorer.update();
             stage.close();
 
           } catch (CannotCompileException e) {
@@ -379,8 +364,6 @@ public class Explorer extends Application {
             a.setHeaderText(null);
             a.setContentText("Cannot compile code " + "\n" + e.getCause().toString());
             a.showAndWait();
-            e.printStackTrace();
-          } catch (IOException | NotFoundException e) {
             e.printStackTrace();
           }
         });
@@ -392,7 +375,6 @@ public class Explorer extends Application {
             item.getCtMethod().insertAfter(body);
             jarExplorer.saveClass(item.getCtClass());
             item.getCtClass().defrost();
-            jarExplorer.update();
             stage.close();
 
           } catch (CannotCompileException e) {
@@ -401,8 +383,6 @@ public class Explorer extends Application {
             a.setHeaderText(null);
             a.setContentText("Cannot compile code " + "\n" + e.getCause().toString());
             a.showAndWait();
-            e.printStackTrace();
-          } catch (IOException | NotFoundException e) {
             e.printStackTrace();
           }
         });
@@ -414,7 +394,6 @@ public class Explorer extends Application {
             item.getCtMethod().insertBefore(body);
             jarExplorer.saveClass(item.getCtClass());
             item.getCtClass().defrost();
-            jarExplorer.update();
             stage.close();
 
           } catch (CannotCompileException e) {
@@ -423,8 +402,6 @@ public class Explorer extends Application {
             a.setHeaderText(null);
             a.setContentText("Cannot compile code " + "\n" + e.getCause().toString());
             a.showAndWait();
-            e.printStackTrace();
-          } catch (IOException | NotFoundException e) {
             e.printStackTrace();
           }
         });
@@ -454,7 +431,7 @@ public class Explorer extends Application {
           value.getCtClass().defrost();
           methodListView.getItems().remove(cell.getItem());
 
-        } catch (NotFoundException | CannotCompileException | IOException e) {
+        } catch (NotFoundException e) {
           e.printStackTrace();
         }
       });
@@ -510,7 +487,7 @@ public class Explorer extends Application {
           value.getCtClass().defrost();
           fieldListView.getItems().remove(cell.getItem());
 
-        } catch (NotFoundException | CannotCompileException | IOException e) {
+        } catch (NotFoundException e) {
           e.printStackTrace();
         }
       });
@@ -585,7 +562,6 @@ public class Explorer extends Application {
             item.getCtConstructor().setBody(body);
             jarExplorer.saveClass(item.getCtClass());
             item.getCtClass().defrost();
-            jarExplorer.update();
             stage.close();
 
           } catch (CannotCompileException e) {
@@ -594,8 +570,6 @@ public class Explorer extends Application {
             a.setHeaderText(null);
             a.setContentText("Cannot compile code " + "\n" + e.getCause().toString());
             a.showAndWait();
-            e.printStackTrace();
-          } catch (IOException | NotFoundException e) {
             e.printStackTrace();
           }
         });
@@ -607,7 +581,6 @@ public class Explorer extends Application {
             item.getCtConstructor().insertAfter(body);
             jarExplorer.saveClass(item.getCtClass());
             item.getCtClass().defrost();
-            jarExplorer.update();
             stage.close();
 
           } catch (CannotCompileException e) {
@@ -616,8 +589,6 @@ public class Explorer extends Application {
             a.setHeaderText(null);
             a.setContentText("Cannot compile code " + "\n" + e.getCause().toString());
             a.showAndWait();
-            e.printStackTrace();
-          } catch (IOException | NotFoundException e) {
             e.printStackTrace();
           }
         });
@@ -629,7 +600,6 @@ public class Explorer extends Application {
             item.getCtConstructor().insertAfter(body);
             jarExplorer.saveClass(item.getCtClass());
             item.getCtClass().defrost();
-            jarExplorer.update();
             stage.close();
 
           } catch (CannotCompileException e) {
@@ -638,8 +608,6 @@ public class Explorer extends Application {
             a.setHeaderText(null);
             a.setContentText("Cannot compile code " + "\n" + e.getCause().toString());
             a.showAndWait();
-            e.printStackTrace();
-          } catch (IOException | NotFoundException e) {
             e.printStackTrace();
           }
         });
@@ -669,7 +637,7 @@ public class Explorer extends Application {
           value.getCtClass().defrost();
           constructorListView.getItems().remove(cell.getItem());
 
-        } catch (NotFoundException | CannotCompileException | IOException e) {
+        } catch (NotFoundException e) {
           e.printStackTrace();
         }
       });
@@ -705,11 +673,11 @@ public class Explorer extends Application {
         }
 
       } catch (NotFoundException e) {
-        Alert a = new Alert(AlertType.ERROR);
-        a.setTitle("Exception");
-        a.setHeaderText(null);
-        a.setContentText(e.getCause().toString());
-        a.showAndWait();
+//        Alert a = new Alert(AlertType.ERROR);
+//        a.setTitle("Exception");
+//        a.setHeaderText(null);
+//        a.setContentText(e.getCause().toString());
+//        a.showAndWait();
         e.printStackTrace();
       } catch (IOException e) {
         e.printStackTrace();
