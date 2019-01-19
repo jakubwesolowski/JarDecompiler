@@ -36,42 +36,26 @@ public class JarExplorer {
     cp = ClassPool.getDefault();
     path = cp.insertClassPath(pathToJar);
     ClassPool.doPruning = false;
-
     manifest = getManifest();
 
     extractArchive(Paths.get(pathToJar), Paths.get(EXTRACT_PATH));
-
     List<String> classNames = getClassNames(Paths.get(EXTRACT_PATH));
 
     jarClasses = new ArrayList<>();
-
     for (String s : classNames) {
       jarClasses.add(new JarClass(cp.get(s)));
     }
-
   }
 
   public List<JarClass> getJarClasses() {
     return jarClasses;
   }
 
-  public Manifest getManifest() throws IOException {
+  private Manifest getManifest() throws IOException {
     return new JarFile(pathToJar).getManifest();
   }
 
-  public List<JarClass> getJarClassesFromNames(List<String> classNames) throws NotFoundException {
-
-    List<JarClass> classes = new ArrayList<>();
-
-    for (String s : classNames) {
-      classes.add(new JarClass(cp.get(s)));
-    }
-
-    return classes;
-  }
-
-
-  public void extractArchive(Path archiveFile, Path destPath) throws IOException {
+  private void extractArchive(Path archiveFile, Path destPath) throws IOException {
 
     FileUtils.deleteDirectory(destPath.toFile());
     Files.createDirectories(destPath);
@@ -101,7 +85,7 @@ public class JarExplorer {
     FileUtils.deleteDirectory(new File(EXTRACT_PATH));
   }
 
-  public List<String> getClassNames(Path path) {
+  private List<String> getClassNames(Path path) {
 
     ArrayList<String> classes = new ArrayList<>();
 
@@ -132,7 +116,7 @@ public class JarExplorer {
     }
   }
 
-  public static void jarDirectory(String sourceDirectoryPath, String jarPath) throws IOException {
+  private static void jarDirectory(String sourceDirectoryPath, String jarPath) throws IOException {
     Path zipFilePath = Files.createFile(Paths.get(jarPath));
 
     try (ZipOutputStream zipOutputStream = new ZipOutputStream(

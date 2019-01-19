@@ -158,7 +158,8 @@ public class Explorer extends Application {
         String body = codeArea.getText();
         try {
           JarClass item = comboBox.getSelectionModel().getSelectedItem();
-          CtNewMethod.make(body, item.getCtClass());
+          CtMethod m = CtNewMethod.make(body, item.getCtClass());
+          item.getCtClass().addMethod(m);
           jarExplorer.saveClass(item.getCtClass());
           item.getCtClass().defrost();
           stage.close();
@@ -264,7 +265,8 @@ public class Explorer extends Application {
         String body = codeArea.getText();
         try {
           JarClass item = comboBox.getSelectionModel().getSelectedItem();
-          CtNewConstructor.make(body, item.getCtClass());
+          CtConstructor constructor = CtNewConstructor.make(body, item.getCtClass());
+          item.getCtClass().addConstructor(constructor);
           jarExplorer.saveClass(item.getCtClass());
           item.getCtClass().defrost();
           stage.close();
@@ -508,6 +510,7 @@ public class Explorer extends Application {
         JarField value = cell.getItem();
 
         try {
+          System.out.println(value.getCtField().getName());
           value.getCtClass().removeField(value.getCtField());
           jarExplorer.saveClass(value.getCtClass());
           value.getCtClass().defrost();
@@ -521,7 +524,7 @@ public class Explorer extends Application {
           a.setHeaderText(null);
           a.setContentText("Cannot compile code " + "\n" + e.getCause().toString());
           a.showAndWait();
-          e.printStackTrace();
+//          e.printStackTrace();
         }
       });
 
