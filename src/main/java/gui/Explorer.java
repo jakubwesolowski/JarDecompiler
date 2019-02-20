@@ -7,6 +7,7 @@ import jar.JarField;
 import jar.JarMethod;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import javafx.application.Application;
@@ -54,6 +55,10 @@ public class Explorer extends Application {
   private static ListView<JarConstructor> constructorListView;
   private static JarExplorer jarExplorer;
   private static List<JarClass> jarClasses;
+  private static ComboBox<JarClass> fieldComboBox = new ComboBox<>();
+  private static ComboBox<JarClass> methodComboBox = new ComboBox<>();
+  private static ComboBox<JarClass> constructorComboBox = new ComboBox<>();
+  private static List<JarClass> editedJarClasses = new ArrayList<>();
 
   @Override
   public void start(Stage primaryStage) {
@@ -100,12 +105,58 @@ public class Explorer extends Application {
     return root;
   }
 
+  private static void addClass() {
+
+    String results[] = AddClass.addClass();
+
+    if (results[0] != null && results[1] != null && results[2] != null) {
+
+      int mod = jarExplorer.getMod(results);
+
+//      boolean duplicate = false;
+//      for (int i = 0; i < classListView.getItems().size(); i++) {
+//        if (Objects.equals(classListView.getItems().get(i).getCtClass().getName(), results[3])) {
+//          duplicate = true;
+//          showAlert("Don't add duplicates.");
+//          break;
+//        }
+//      }
+      if (results[3].length() > 0) {
+//        CtClass clazz = Explorer.classPool.makeClass(results[3]);
+
+        CtClass clazz = jarExplorer.makeClass(results[3]);
+
+        try {
+          clazz.setModifiers(mod);
+
+          JarClass jarClazz = new JarClass(clazz);
+
+          rootTreeItem.getChildren().add(new TreeItem<>(jarClazz));
+          fieldComboBox.getItems().add(jarClazz);
+          methodComboBox.getItems().add(jarClazz);
+          constructorComboBox.getItems().add(jarClazz);
+
+//          classListView.getItems().add(new MyClass(clazz, true));
+        } catch (RuntimeException e) {
+          e.printStackTrace();
+        }
+
+      }
+    }
+
+  }
+
+
   public static MenuBar createMenu() {
     MenuBar menuBar = new MenuBar();
 
     Menu fileMenu = new Menu("File");
     MenuItem openFile = new MenuItem("Open");
+    MenuItem newClass = new MenuItem("Add class");
     MenuItem saveJar = new Menu("Save");
+
+    newClass.setOnAction(e -> addClass());
+
     openFile.setOnAction(e -> {
       addFileTree();
     });
@@ -119,6 +170,9 @@ public class Explorer extends Application {
       File selectedFile = chooser.showSaveDialog(null);
 
       try {
+        for (JarClass clazz : editedJarClasses) {
+          jarExplorer.addEditedJarClass(clazz);
+        }
         jarExplorer.saveJar(selectedFile.getAbsolutePath());
 
       } catch (IOException e1) {
@@ -128,6 +182,7 @@ public class Explorer extends Application {
     });
     fileMenu.getItems().add(openFile);
     fileMenu.getItems().add(saveJar);
+    fileMenu.getItems().add(newClass);
     menuBar.getMenus().add(fileMenu);
 
     Menu editMenu = new Menu("Edit");
@@ -137,6 +192,66 @@ public class Explorer extends Application {
     MenuItem addMethod = new MenuItem("Add method");
     MenuItem addField = new MenuItem("Add field");
     MenuItem addConstructor = new MenuItem("Add constructor");
+    MenuItem addInterface = new MenuItem("Add interface");
+
+    addInterface.setOnAction(event -> {
+
+      Stage stage = new Stage();
+      stage.initModality(Modality.APPLICATION_MODAL);
+
+      Pane methodPane = new Pane();
+
+      VBox vBox = new VBox();
+      vBox.setSpacing(10);
+
+      Label label = new Label("Select class");
+      TextArea codeArea = new TextArea();
+      Button button = new Button("Add");
+
+      button.setOnAction(e1 -> {
+
+        String body = codeArea.getText();
+        System.out.println(body);
+        JarClass item = methodComboBox.getSelectionModel().getSelectedItem();
+        CtClass ctInterface = jarExplorer.getInterface(body);
+        item.getCtClass().addInterface(ctInterface);
+
+        boolean exists = false;
+        for (JarClass clazz : editedJarClasses) {
+          if (clazz.getName().equals(item.getName())) {
+            editedJarClasses.remove(clazz);
+            editedJarClasses.add(item);
+            exists = true;
+            break;
+          }
+        }
+
+        if (!exists) {
+          editedJarClasses.add(item);
+        }
+        item.getCtClass().defrost();
+        stage.close();
+
+      });
+
+      methodComboBox.getItems().addAll(jarClasses);
+
+      HBox.setHgrow(label, Priority.ALWAYS);
+      vBox.getChildren().add(label);
+      HBox.setHgrow(methodComboBox, Priority.ALWAYS);
+      vBox.getChildren().add(methodComboBox);
+      HBox.setHgrow(codeArea, Priority.ALWAYS);
+      vBox.getChildren().add(codeArea);
+      HBox.setHgrow(button, Priority.ALWAYS);
+      vBox.getChildren().add(button);
+      methodPane.getChildren().add(vBox);
+
+      Scene scene = new Scene(methodPane);
+
+      stage.setScene(scene);
+      stage.show();
+
+    });
 
     addMethod.setOnAction(event -> {
 
@@ -149,18 +264,31 @@ public class Explorer extends Application {
       vBox.setSpacing(10);
 
       Label label = new Label("Select class");
-      ComboBox<JarClass> comboBox = new ComboBox<>();
       TextArea codeArea = new TextArea();
       Button button = new Button("Add");
 
       button.setOnAction(e1 -> {
 
         String body = codeArea.getText();
+        System.out.println(body);
         try {
-          JarClass item = comboBox.getSelectionModel().getSelectedItem();
+          JarClass item = methodComboBox.getSelectionModel().getSelectedItem();
           CtMethod m = CtNewMethod.make(body, item.getCtClass());
           item.getCtClass().addMethod(m);
-          jarExplorer.saveClass(item.getCtClass());
+
+          boolean exists = false;
+          for (JarClass clazz : editedJarClasses) {
+            if (clazz.getName().equals(item.getName())) {
+              editedJarClasses.remove(clazz);
+              editedJarClasses.add(item);
+              exists = true;
+              break;
+            }
+          }
+
+          if (!exists) {
+            editedJarClasses.add(item);
+          }
           item.getCtClass().defrost();
           stage.close();
 
@@ -174,12 +302,12 @@ public class Explorer extends Application {
         }
       });
 
-      comboBox.getItems().addAll(jarClasses);
+      methodComboBox.getItems().addAll(jarClasses);
 
       HBox.setHgrow(label, Priority.ALWAYS);
       vBox.getChildren().add(label);
-      HBox.setHgrow(comboBox, Priority.ALWAYS);
-      vBox.getChildren().add(comboBox);
+      HBox.setHgrow(methodComboBox, Priority.ALWAYS);
+      vBox.getChildren().add(methodComboBox);
       HBox.setHgrow(codeArea, Priority.ALWAYS);
       vBox.getChildren().add(codeArea);
       HBox.setHgrow(button, Priority.ALWAYS);
@@ -202,7 +330,7 @@ public class Explorer extends Application {
       vBox.setSpacing(10);
 
       Label label = new Label("Select class");
-      ComboBox<JarClass> comboBox = new ComboBox<>();
+//      ComboBox<JarClass> comboBox = new ComboBox<>();
       TextArea codeArea = new TextArea();
       Button button = new Button("Add");
 
@@ -210,10 +338,24 @@ public class Explorer extends Application {
 
         String body = codeArea.getText();
         try {
-          JarClass item = comboBox.getSelectionModel().getSelectedItem();
+          JarClass item = fieldComboBox.getSelectionModel().getSelectedItem();
           CtField field = CtField.make(body, item.getCtClass());
           item.getCtClass().addField(field);
-          jarExplorer.saveClass(item.getCtClass());
+
+          boolean exists = false;
+          for (JarClass clazz : editedJarClasses) {
+            if (clazz.getName().equals(item.getName())) {
+              editedJarClasses.remove(clazz);
+              editedJarClasses.add(item);
+              exists = true;
+              break;
+            }
+          }
+
+          if (!exists) {
+            editedJarClasses.add(item);
+          }
+
           item.getCtClass().defrost();
           stage.close();
 
@@ -227,12 +369,12 @@ public class Explorer extends Application {
         }
       });
 
-      comboBox.getItems().addAll(jarClasses);
+      fieldComboBox.getItems().addAll(jarClasses);
 
       HBox.setHgrow(label, Priority.ALWAYS);
       vBox.getChildren().add(label);
-      HBox.setHgrow(comboBox, Priority.ALWAYS);
-      vBox.getChildren().add(comboBox);
+      HBox.setHgrow(fieldComboBox, Priority.ALWAYS);
+      vBox.getChildren().add(fieldComboBox);
       HBox.setHgrow(codeArea, Priority.ALWAYS);
       vBox.getChildren().add(codeArea);
       HBox.setHgrow(button, Priority.ALWAYS);
@@ -256,7 +398,6 @@ public class Explorer extends Application {
       vBox.setSpacing(10);
 
       Label label = new Label("Select class");
-      ComboBox<JarClass> comboBox = new ComboBox<>();
       TextArea codeArea = new TextArea();
       Button button = new Button("Add");
 
@@ -264,10 +405,23 @@ public class Explorer extends Application {
 
         String body = codeArea.getText();
         try {
-          JarClass item = comboBox.getSelectionModel().getSelectedItem();
+          JarClass item = constructorComboBox.getSelectionModel().getSelectedItem();
           CtConstructor constructor = CtNewConstructor.make(body, item.getCtClass());
           item.getCtClass().addConstructor(constructor);
-          jarExplorer.saveClass(item.getCtClass());
+
+          boolean exists = false;
+          for (JarClass clazz : editedJarClasses) {
+            if (clazz.getName().equals(item.getName())) {
+              editedJarClasses.remove(clazz);
+              editedJarClasses.add(item);
+              exists = true;
+              break;
+            }
+          }
+
+          if (!exists) {
+            editedJarClasses.add(item);
+          }
           item.getCtClass().defrost();
           stage.close();
 
@@ -281,12 +435,12 @@ public class Explorer extends Application {
         }
       });
 
-      comboBox.getItems().addAll(jarClasses);
+      constructorComboBox.getItems().addAll(jarClasses);
 
       HBox.setHgrow(label, Priority.ALWAYS);
       vBox.getChildren().add(label);
-      HBox.setHgrow(comboBox, Priority.ALWAYS);
-      vBox.getChildren().add(comboBox);
+      HBox.setHgrow(constructorComboBox, Priority.ALWAYS);
+      vBox.getChildren().add(constructorComboBox);
       HBox.setHgrow(codeArea, Priority.ALWAYS);
       vBox.getChildren().add(codeArea);
       HBox.setHgrow(button, Priority.ALWAYS);
@@ -300,7 +454,7 @@ public class Explorer extends Application {
 
     });
 
-    addMenu.getItems().addAll(addField, addConstructor, addMethod);
+    addMenu.getItems().addAll(addField, addConstructor, addMethod, addInterface);
     menuBar.getMenus().add(addMenu);
 
     return menuBar;
@@ -374,7 +528,20 @@ public class Explorer extends Application {
           String body = methodBody.getText();
           try {
             item.getCtMethod().setBody(body);
-            jarExplorer.saveClass(item.getCtClass());
+            boolean exists = false;
+            for (JarClass clazz : editedJarClasses) {
+              if (clazz.getName().equals(item.getName())) {
+                editedJarClasses.remove(clazz);
+                editedJarClasses.add(new JarClass(item.getCtClass()));
+                exists = true;
+                break;
+              }
+            }
+
+            if (!exists) {
+              editedJarClasses.add(new JarClass(item.getCtClass()));
+            }
+
             item.getCtClass().defrost();
             stage.close();
 
@@ -394,7 +561,20 @@ public class Explorer extends Application {
 
           try {
             item.getCtMethod().insertAfter(body);
-            jarExplorer.saveClass(item.getCtClass());
+            boolean exists = false;
+            for (JarClass clazz : editedJarClasses) {
+              if (clazz.getName().equals(item.getName())) {
+                editedJarClasses.remove(clazz);
+                editedJarClasses.add(new JarClass(item.getCtClass()));
+                exists = true;
+                break;
+              }
+            }
+
+            if (!exists) {
+              editedJarClasses.add(new JarClass(item.getCtClass()));
+            }
+
             item.getCtClass().defrost();
             stage.close();
 
@@ -413,7 +593,19 @@ public class Explorer extends Application {
 
           try {
             item.getCtMethod().insertBefore(body);
-            jarExplorer.saveClass(item.getCtClass());
+            boolean exists = false;
+            for (JarClass clazz : editedJarClasses) {
+              if (clazz.getName().equals(item.getName())) {
+                editedJarClasses.remove(clazz);
+                editedJarClasses.add(new JarClass(item.getCtClass()));
+                exists = true;
+                break;
+              }
+            }
+
+            if (!exists) {
+              editedJarClasses.add(new JarClass(item.getCtClass()));
+            }
             item.getCtClass().defrost();
             stage.close();
 
@@ -448,18 +640,24 @@ public class Explorer extends Application {
 
         try {
           value.getCtClass().removeMethod(value.getCtMethod());
-          jarExplorer.saveClass(value.getCtClass());
+          boolean exists = false;
+          for (JarClass clazz : editedJarClasses) {
+            if (clazz.getName().equals(value.getName())) {
+              editedJarClasses.remove(clazz);
+              editedJarClasses.add(new JarClass(value.getCtClass()));
+              exists = true;
+              break;
+            }
+          }
+
+          if (!exists) {
+            editedJarClasses.add(new JarClass(value.getCtClass()));
+          }
+
           value.getCtClass().defrost();
           methodListView.getItems().remove(cell.getItem());
 
         } catch (NotFoundException e) {
-          e.printStackTrace();
-        } catch (CannotCompileException e) {
-          Alert a = new Alert(AlertType.ERROR);
-          a.setTitle("Compile error");
-          a.setHeaderText(null);
-          a.setContentText("Cannot compile code " + "\n" + e.getCause().toString());
-          a.showAndWait();
           e.printStackTrace();
         }
       });
@@ -512,19 +710,25 @@ public class Explorer extends Application {
         try {
           System.out.println(value.getCtField().getName());
           value.getCtClass().removeField(value.getCtField());
-          jarExplorer.saveClass(value.getCtClass());
+          boolean exists = false;
+          for (JarClass clazz : editedJarClasses) {
+            if (clazz.getName().equals(value.getCtClass().getName())) {
+              editedJarClasses.remove(clazz);
+              editedJarClasses.add(new JarClass(value.getCtClass()));
+              exists = true;
+              break;
+            }
+          }
+
+          if (!exists) {
+            editedJarClasses.add(new JarClass(value.getCtClass()));
+          }
+
           value.getCtClass().defrost();
           fieldListView.getItems().remove(cell.getItem());
 
         } catch (NotFoundException e) {
           e.printStackTrace();
-        } catch (CannotCompileException e) {
-          Alert a = new Alert(AlertType.ERROR);
-          a.setTitle("Compile error");
-          a.setHeaderText(null);
-          a.setContentText("Cannot compile code " + "\n" + e.getCause().toString());
-          a.showAndWait();
-//          e.printStackTrace();
         }
       });
 
@@ -596,7 +800,20 @@ public class Explorer extends Application {
           String body = methodBody.getText();
           try {
             item.getCtConstructor().setBody(body);
-            jarExplorer.saveClass(item.getCtClass());
+            boolean exists = false;
+            for (JarClass clazz : editedJarClasses) {
+              if (clazz.getName().equals(item.getCtClass().getName())) {
+                editedJarClasses.remove(clazz);
+                editedJarClasses.add(new JarClass(item.getCtClass()));
+                exists = true;
+                break;
+              }
+            }
+
+            if (!exists) {
+              editedJarClasses.add(new JarClass(item.getCtClass()));
+            }
+
             item.getCtClass().defrost();
             stage.close();
 
@@ -615,7 +832,20 @@ public class Explorer extends Application {
 
           try {
             item.getCtConstructor().insertAfter(body);
-            jarExplorer.saveClass(item.getCtClass());
+            boolean exists = false;
+            for (JarClass clazz : editedJarClasses) {
+              if (clazz.getName().equals(item.getCtClass().getName())) {
+                editedJarClasses.remove(clazz);
+                editedJarClasses.add(new JarClass(item.getCtClass()));
+                exists = true;
+                break;
+              }
+            }
+
+            if (!exists) {
+              editedJarClasses.add(new JarClass(item.getCtClass()));
+            }
+
             item.getCtClass().defrost();
             stage.close();
 
@@ -634,7 +864,20 @@ public class Explorer extends Application {
 
           try {
             item.getCtConstructor().insertAfter(body);
-            jarExplorer.saveClass(item.getCtClass());
+            boolean exists = false;
+            for (JarClass clazz : editedJarClasses) {
+              if (clazz.getName().equals(item.getCtClass().getName())) {
+                editedJarClasses.remove(clazz);
+                editedJarClasses.add(new JarClass(item.getCtClass()));
+                exists = true;
+                break;
+              }
+            }
+
+            if (!exists) {
+              editedJarClasses.add(new JarClass(item.getCtClass()));
+            }
+
             item.getCtClass().defrost();
             stage.close();
 
@@ -669,18 +912,19 @@ public class Explorer extends Application {
 
         try {
           value.getCtClass().removeConstructor(value.getCtConstructor());
-          jarExplorer.saveClass(value.getCtClass());
+          boolean exists = false;
+          for (JarClass clazz : editedJarClasses) {
+            if (clazz.getName().equals(value.getCtClass().getName())) {
+              jarClasses.remove(clazz);
+              jarClasses.add(new JarClass(value.getCtClass()));
+              exists = true;
+              break;
+            }
+          }
           value.getCtClass().defrost();
           constructorListView.getItems().remove(cell.getItem());
 
         } catch (NotFoundException e) {
-          e.printStackTrace();
-        } catch (CannotCompileException e) {
-          Alert a = new Alert(AlertType.ERROR);
-          a.setTitle("Compile error");
-          a.setHeaderText(null);
-          a.setContentText("Cannot compile code " + "\n" + e.getCause().toString());
-          a.showAndWait();
           e.printStackTrace();
         }
       });

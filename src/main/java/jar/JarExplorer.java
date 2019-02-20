@@ -19,6 +19,7 @@ import javassist.CannotCompileException;
 import javassist.ClassPath;
 import javassist.ClassPool;
 import javassist.CtClass;
+import javassist.Modifier;
 import javassist.NotFoundException;
 import org.apache.commons.io.FileUtils;
 
@@ -28,6 +29,7 @@ public class JarExplorer {
   private ClassPool cp;
   private ClassPath path;
   private List<JarClass> jarClasses;
+  private List<JarClass> editedJarClasses = new ArrayList<>();
   private Manifest manifest;
   private final String EXTRACT_PATH = "./extracted";
 
@@ -45,6 +47,10 @@ public class JarExplorer {
     for (String s : classNames) {
       jarClasses.add(new JarClass(cp.get(s)));
     }
+  }
+
+  public void addEditedJarClass(JarClass clazz) {
+    editedJarClasses.add(clazz);
   }
 
   public List<JarClass> getJarClasses() {
@@ -69,18 +75,29 @@ public class JarExplorer {
       for (ZipEntry entry : entries) {
         Path entryDest = destPath.resolve(entry.getName());
 
-        if (entry.isDirectory()) {
+        System.out.println(entry.getName());
+
+        if (entry.isDirectory() && !entry.getName().endsWith("//")) {
           Files.createDirectory(entryDest);
           continue;
         }
 
-        Files.copy(archive.getInputStream(entry), entryDest);
+        if (!entry.getName().endsWith("//")) {
+          Files.copy(archive.getInputStream(entry), entryDest);
+        }
       }
     }
   }
 
-  public void saveJar(String pathToJar) throws IOException {
+  private void compileClasses() {
+    for (JarClass clazz : editedJarClasses) {
+      System.out.println("Compilling " + clazz.getName());
+      saveClass(clazz.getCtClass());
+    }
+  }
 
+  public void saveJar(String pathToJar) throws IOException {
+    compileClasses();
     jarDirectory(EXTRACT_PATH, pathToJar);
     FileUtils.deleteDirectory(new File(EXTRACT_PATH));
   }
@@ -106,12 +123,12 @@ public class JarExplorer {
     return classes;
   }
 
-  public void saveClass(CtClass ctClass) throws CannotCompileException {
-    ctClass.toClass(this.getClass().getClassLoader(), this.getClass().getProtectionDomain());
-    System.out.println(ctClass.getName());
+  private void saveClass(CtClass ctClass) {
     try {
+      ctClass.toClass(this.getClass().getClassLoader(), this.getClass().getProtectionDomain());
+      System.out.println(ctClass.getName());
       ctClass.writeFile(EXTRACT_PATH);
-    } catch (IOException e) {
+    } catch (IOException | CannotCompileException e) {
       e.printStackTrace();
     }
   }
@@ -136,5 +153,64 @@ public class JarExplorer {
             }
           });
     }
+  }
+
+  public static int getMod(String[] mods) {
+    int mod = 0;
+    for (String mod1 : mods) {
+      switch (mod1) {
+        case "public": {
+          mod += Modifier.PUBLIC;
+          break;
+        }
+        case "protected": {
+          mod += Modifier.PROTECTED;
+          break;
+        }
+        case "private": {
+          mod += Modifier.PRIVATE;
+          break;
+        }
+        case "static": {
+          mod += Modifier.STATIC;
+          break;
+        }
+        case "final": {
+          mod += Modifier.FINAL;
+          break;
+        }
+        case "static final": {
+          mod += Modifier.STATIC;
+          mod += Modifier.FINAL;
+          break;
+        }
+        case "interface": {
+          mod += Modifier.INTERFACE;
+          break;
+        }
+        case "abstract": {
+          mod += Modifier.ABSTRACT;
+          break;
+        }
+        default: {
+          mod += 0;
+          break;
+        }
+      }
+    }
+    return mod;
+  }
+
+  public CtClass makeClass(String result) {
+    return cp.makeClass(result);
+  }
+
+  public CtClass getInterface(String body) {
+    try {
+      return cp.get(body);
+    } catch (NotFoundException e) {
+      e.printStackTrace();
+    }
+    return null;
   }
 }
